@@ -3,6 +3,18 @@
 Package pht provides programmer-oriented HTML templating, because
 everything else frustrates me.
 
+This is intended to be easy-to-use for programmers, with some
+programmer-specific features, and also generate very nice-looking HTML
+output, for the aesthetics of the thing. Because of that, this has a
+few more knobs than you might expect (especially "Block") for indicating
+the aesthetics of the output tags.
+
+Generics are used to make chain-like operations easy.
+
+Named tags are a mechanism for returning a larger Tag that is the
+representation of something but allow you to hook into it more deeply.
+This is a bad mechanism and should be reconsidered.
+
 */
 package pht
 
@@ -51,14 +63,15 @@ func (t *Tag) Attr(name, value string) *Tag {
 	return t
 }
 
-func (t *Tag) Append(html HTML) HTML {
-	t.Content = append(t.Content, html)
+// Append returns the thing being appended as a type-safe value, so it can
+// chain nicely.
+func Append[H HTML](t Appendable, html H) H {
+	t.Append(html)
 	return html
 }
 
-func (t *Tag) AppendTag(tag *Tag) *Tag {
-	t.Content = append(t.Content, tag)
-	return tag
+func (t *Tag) Append(html ...HTML) {
+	t.Content = append(t.Content, html...)
 }
 
 func (t *Tag) AppendNamedTag(name string, tag *Tag) *Tag {
@@ -68,10 +81,6 @@ func (t *Tag) AppendNamedTag(name string, tag *Tag) *Tag {
 	}
 	t.NamedTags[name] = tag
 	return tag
-}
-
-func (t *Tag) AppendMany(html ...HTML) {
-	t.Content = append(t.Content, html...)
 }
 
 func (t *Tag) AddClass(cls ...string) *Tag {
@@ -89,7 +98,7 @@ func (t *Tag) AddClass(cls ...string) *Tag {
 }
 
 func (t *Tag) AddStyle(styles ...string) *Tag {
-	toAdd := strings.Join(styles, " ")
+	toAdd := strings.Join(styles, "; ")
 	if t.Attributes == nil {
 		t.Attributes = map[string]string{}
 	}
@@ -97,7 +106,7 @@ func (t *Tag) AddStyle(styles ...string) *Tag {
 	if prevClass == "" {
 		t.Attributes["style"] = toAdd
 	} else {
-		t.Attributes["style"] += " " + toAdd
+		t.Attributes["style"] += "; " + toAdd
 	}
 	return t
 }
@@ -330,25 +339,6 @@ func (chtml ClosureHTML) On(_ string) *Tag {
 	return nil
 }
 
-func GridTextInput(id string,
-	placeholder string,
-	enterkeyhint string,
-	value string,
-) HTML {
-	return ClosureHTML(func(indent int, w io.Writer) error {
-		input := Tag{Name: "input"}
-		input.Attr("type", "text").
-			Attr("id", id).
-			Attr("placeholder", placeholder).
-			Attr("list", "service_options").
-			Attr("autocorrect", "off").
-			Attr("enterkeyhint", first(enterkeyhint, "next")).
-			Attr("value", value)
-
-		return input.Render(indent, w)
-	})
-}
-
 // HTML is something that knows how to render itself to HTML.
 type HTML interface {
 	Render(indent int, w io.Writer) error
@@ -358,6 +348,11 @@ type HTML interface {
 	// should be done carefully. But often you have static guarantees
 	// it'll be valid.
 	On(string) *Tag
+}
+
+type Appendable interface {
+	HTML
+	Append(...HTML)
 }
 
 // TagReferences is a convenient way to implement non-trivial Inner

@@ -14,22 +14,27 @@ func TA(name string, atts map[string]string) *Tag {
 // A is a shortcut type for declaring attribute maps.
 type A map[string]string
 
+// C is a shortcut for creating conten.
 func C(content string) Content {
 	return Content{content}
 }
 
+// S is a shortcut for a section.
 func S() Section {
 	return Section{}
 }
 
-func Seq() *Sequence {
-	return &Sequence{}
+// Seq is a shortcut for a sequence.
+func Seq(html ...HTML) *Sequence {
+	return &Sequence{html: html}
 }
 
+// PE is a shortcut for creating a pre-escaped section.
 func PE(s string) *PreEscaped {
 	return &PreEscaped{s, false}
 }
 
+// B is a shortcut for creating a block.
 func B(html ...HTML) *Block {
 	return &Block{Components: html}
 }
